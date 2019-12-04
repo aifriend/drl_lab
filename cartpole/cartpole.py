@@ -1,15 +1,19 @@
+import os
 import random
 from collections import deque
 
 import gym
 import keras
 import numpy as np
+from keras.engine.saving import model_from_json
 from keras.layers import Dense
 from keras.models import Sequential
 from keras.optimizers import Adam
 from scores.score_logger import ScoreLogger
+from tensorflow_core.python.keras.models import load_model
 
 ENV_NAME = "CartPole-v1"
+MODEL_NAME = "model/best_cartpole.h5"
 
 GAMMA = 0.95
 LEARNING_RATE = 0.001
@@ -19,7 +23,7 @@ BATCH_SIZE = 20
 
 EXPLORATION_MAX = 1.0
 EXPLORATION_MIN = 0.01
-EXPLORATION_DECAY = 0.995
+EXPLORATION_DECAY = 0.998
 
 
 class DQNSolver:
@@ -30,11 +34,14 @@ class DQNSolver:
         self.action_space = action_space
         self.memory = deque(maxlen=MEMORY_SIZE)
 
-        self.model = Sequential()
-        self.model.add(Dense(24, input_shape=(observation_space,), activation="relu"))
-        self.model.add(Dense(24, activation="relu"))
-        self.model.add(Dense(self.action_space, activation="linear"))
-        self.model.compile(loss="mse", optimizer=Adam(lr=LEARNING_RATE))
+        if os.path.exists(MODEL_NAME):
+            self.model = load_model(MODEL_NAME)
+        else:
+            self.model = Sequential()
+            self.model.add(Dense(24, input_shape=(observation_space,), activation="relu"))
+            self.model.add(Dense(24, activation="relu"))
+            self.model.add(Dense(self.action_space, activation="linear"))
+            self.model.compile(loss="mse", optimizer=Adam(lr=LEARNING_RATE))
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
@@ -45,8 +52,11 @@ class DQNSolver:
         q_values = self.model.predict(state)
         return np.argmax(q_values[0])
 
-    def save(self):
-        self.model.save("model/best.hdf5", overwrite=True)
+    def save_model(self):
+        # serialize weights to HDF5
+        self.model.save(MODEL_NAME)
+        del self.model
+        self.model = load_model(MODEL_NAME)
 
     def experience_replay(self):
         if len(self.memory) < BATCH_SIZE:
@@ -58,7 +68,7 @@ class DQNSolver:
                 q_update = (reward + GAMMA * np.amax(self.model.predict(state_next)[0]))
             q_values = self.model.predict(state)
             q_values[0][action] = q_update
-            self.model.fit(state, q_values, verbose=0, callbacks=[check_pointer])
+            self.model.fit(state, q_values, verbose=0)
         self.exploration_rate *= EXPLORATION_DECAY
         self.exploration_rate = max(EXPLORATION_MIN, self.exploration_rate)
 
@@ -90,12 +100,8 @@ def cartpole():
                 score_logger.add_score(step, run)
                 break
             dqn_solver.experience_replay()
-            dqn_solver.save()
+        dqn_solver.save_model()
 
 
 if __name__ == "__main__":
-    check_pointer = keras.callbacks.ModelCheckpoint(
-        filepath=r"model\best.hdf5", monitor='val_acc', verbose=1,
-        save_best_only=True, save_weights_only=False, mode='auto', period=1)
-
     cartpole()
