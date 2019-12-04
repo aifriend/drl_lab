@@ -9,9 +9,11 @@ from keras.layers import Dense
 from keras.models import Sequential
 from keras.optimizers import Adam
 from scores.score_logger import ScoreLogger
+from tensorflow_core.python.keras.models import load_model
 
 ENV_NAME = "CartPole-v1"
-MODEL_NAME = "model/best_cartpole.h5"
+SAVE_MODULE = "model/cartpole.h5"
+LOAD_MODULE = "model/best_cartpole.h5"
 
 GAMMA = 0.95
 LEARNING_RATE = 0.001
@@ -38,12 +40,6 @@ class DQNSolver:
         self.model.add(Dense(self.action_space, activation="linear"))
         self.model.compile(loss="mse", optimizer=Adam(lr=LEARNING_RATE))
 
-        self.model_checkpoint = ModelCheckpoint(MODEL_NAME,
-                                                verbose=0, save_best_only=False,
-                                                period=1, save_weights_only=True)
-
-        self.model.load_weights("model/cartpole_500.h5")
-
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
 
@@ -52,6 +48,14 @@ class DQNSolver:
             return random.randrange(self.action_space)
         q_values = self.model.predict(state)
         return np.argmax(q_values[0])
+
+    def load_mode(self):
+        self.model = load_model(LOAD_MODULE)
+
+    def save_model(self, id):
+        # serialize weights to HDF5
+        file_name, file_extension = os.path.splitext(SAVE_MODULE)
+        self.model.save(file_name + "_" + str(id) + file_extension)
 
     def experience_replay(self):
         if len(self.memory) < BATCH_SIZE:
@@ -63,7 +67,7 @@ class DQNSolver:
                 q_update = (reward + GAMMA * np.amax(self.model.predict(state_next)[0]))
             q_values = self.model.predict(state)
             q_values[0][action] = q_update
-            self.model.fit(state, q_values, callbacks=[self.model_checkpoint], verbose=0)
+            self.model.fit(state, q_values, verbose=0)
         self.exploration_rate *= EXPLORATION_DECAY
         self.exploration_rate = max(EXPLORATION_MIN, self.exploration_rate)
 
@@ -74,6 +78,8 @@ def cartpole():
     observation_space = env.observation_space.shape[0]
     action_space = env.action_space.n
     dqn_solver = DQNSolver(observation_space, action_space)
+    if os.path.exists(LOAD_MODULE):
+        dqn_solver.load_mode()
     run = 0
     while True:
         run += 1
@@ -86,12 +92,16 @@ def cartpole():
             action = dqn_solver.act(state)
             state_next, reward, terminal, info = env.step(action)
             reward = reward if not terminal else -reward
+            if reward == 500:
+                pass
             state_next = np.reshape(state_next, [1, observation_space])
             dqn_solver.remember(state, action, reward, state_next, terminal)
             state = state_next
             if terminal:
                 print(
                     "Run: " + str(run) + ", exploration: " + str(dqn_solver.exploration_rate) + ", score: " + str(step))
+                if len(score_logger.scores) > 0 and step > max(score_logger.scores):
+                    dqn_solver.save_model(step)
                 score_logger.add_score(step, run)
                 break
             dqn_solver.experience_replay()
