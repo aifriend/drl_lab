@@ -13,7 +13,7 @@ from scores.score_logger import ScoreLogger
 from tensorflow_core.python.keras.models import load_model
 
 ENV_NAME = "CartPole-v1"
-MODEL_NAME = "model/best_cartpole.h5"
+MODEL_NAME = "model/best_cartpole_500.h5"
 
 GAMMA = 0.95
 LEARNING_RATE = 0.001
@@ -23,7 +23,7 @@ BATCH_SIZE = 20
 
 EXPLORATION_MAX = 1.0
 EXPLORATION_MIN = 0.01
-EXPLORATION_DECAY = 0.998
+EXPLORATION_DECAY = 0.9998
 
 
 class DQNSolver:
@@ -52,11 +52,10 @@ class DQNSolver:
         q_values = self.model.predict(state)
         return np.argmax(q_values[0])
 
-    def save_model(self):
+    def save_model(self, id):
         # serialize weights to HDF5
-        self.model.save(MODEL_NAME)
-        del self.model
-        self.model = load_model(MODEL_NAME)
+        file_name, file_extension = os.path.splitext(MODEL_NAME)
+        self.model.save(file_name + "_" + str(id) + file_extension)
 
     def experience_replay(self):
         if len(self.memory) < BATCH_SIZE:
@@ -97,10 +96,11 @@ def cartpole():
             if terminal:
                 print(
                     "Run: " + str(run) + ", exploration: " + str(dqn_solver.exploration_rate) + ", score: " + str(step))
+                if len(score_logger.scores) > 0 and step > max(score_logger.scores):
+                    dqn_solver.save_model(step)
                 score_logger.add_score(step, run)
                 break
             dqn_solver.experience_replay()
-        dqn_solver.save_model()
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@ SCORES_CSV_PATH = "./scores/scores.csv"
 SCORES_PNG_PATH = "./scores/scores.png"
 SOLVED_CSV_PATH = "./scores/solved.csv"
 SOLVED_PNG_PATH = "./scores/solved.png"
-AVERAGE_SCORE_TO_SOLVE = 195
+AVERAGE_SCORE_TO_SOLVE = 1195
 CONSECUTIVE_RUNS_TO_SOLVE = 100
 
 
