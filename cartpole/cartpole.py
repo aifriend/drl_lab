@@ -1,10 +1,9 @@
 import os
 import random
+from collections import deque
+
 import gym
 import numpy as np
-
-from collections import deque
-from keras.callbacks import ModelCheckpoint
 from keras.layers import Dense
 from keras.models import Sequential
 from keras.optimizers import Adam
@@ -23,7 +22,7 @@ BATCH_SIZE = 20
 
 EXPLORATION_MAX = 1.0
 EXPLORATION_MIN = 0.01
-EXPLORATION_DECAY = 0.999
+EXPLORATION_DECAY = 0.998
 
 
 class DQNSolver:
@@ -55,7 +54,8 @@ class DQNSolver:
     def save_model(self, id):
         # serialize weights to HDF5
         file_name, file_extension = os.path.splitext(SAVE_MODULE)
-        self.model.save(file_name + "_" + str(id) + file_extension)
+        model_path = file_name + "_" + str(id) + file_extension
+        self.model.save(model_path)
 
     def experience_replay(self):
         if len(self.memory) < BATCH_SIZE:
@@ -74,6 +74,8 @@ class DQNSolver:
 
 def cartpole():
     env = gym.make(ENV_NAME)
+    env.spec.reward_threshold = 1000
+    env.spec.max_episode_steps = 1000
     score_logger = ScoreLogger(ENV_NAME)
     observation_space = env.observation_space.shape[0]
     action_space = env.action_space.n
@@ -92,8 +94,6 @@ def cartpole():
             action = dqn_solver.act(state)
             state_next, reward, terminal, info = env.step(action)
             reward = reward if not terminal else -reward
-            if reward == 500:
-                pass
             state_next = np.reshape(state_next, [1, observation_space])
             dqn_solver.remember(state, action, reward, state_next, terminal)
             state = state_next

@@ -1,20 +1,17 @@
+import csv
+import os
+from collections import deque
 from statistics import mean
 
-import matplotlib
-
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from collections import deque
-import os
-import csv
 import numpy as np
 
 SCORES_CSV_PATH = "./scores/scores.csv"
 SCORES_PNG_PATH = "./scores/scores.png"
 SOLVED_CSV_PATH = "./scores/solved.csv"
 SOLVED_PNG_PATH = "./scores/solved.png"
-AVERAGE_SCORE_TO_SOLVE = 1195
-CONSECUTIVE_RUNS_TO_SOLVE = 1000
+AVERAGE_SCORE_TO_SOLVE = 500
+CONSECUTIVE_RUNS_TO_SOLVE = 100000
 
 
 class ScoreLogger:
