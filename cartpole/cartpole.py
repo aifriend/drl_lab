@@ -1,9 +1,9 @@
 import os
 import random
-from collections import deque
-
 import gym
 import numpy as np
+
+from collections import deque
 from keras.layers import Dense
 from keras.models import Sequential
 from keras.optimizers import Adam
@@ -11,6 +11,7 @@ from scores.score_logger import ScoreLogger
 from tensorflow_core.python.keras.models import load_model
 
 ENV_NAME = "CartPole-v1"
+LOAD = True
 SAVE_MODULE = "model/cartpole.h5"
 LOAD_MODULE = "model/best_cartpole.h5"
 
@@ -80,7 +81,7 @@ def cartpole():
     observation_space = env.observation_space.shape[0]
     action_space = env.action_space.n
     dqn_solver = DQNSolver(observation_space, action_space)
-    if os.path.exists(LOAD_MODULE):
+    if LOAD and os.path.exists(LOAD_MODULE):
         dqn_solver.load_mode()
     run = 0
     while True:
@@ -100,7 +101,7 @@ def cartpole():
             if terminal:
                 print(
                     "Run: " + str(run) + ", exploration: " + str(dqn_solver.exploration_rate) + ", score: " + str(step))
-                if len(score_logger.scores) > 0 and step > max(score_logger.scores):
+                if len(score_logger.scores) > 0 and step > max(score_logger.scores) > 450:
                     dqn_solver.save_model(step)
                 score_logger.add_score(step, run)
                 break
